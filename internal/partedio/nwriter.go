@@ -38,7 +38,8 @@ func NewNWriter(partSize int64, concurrency int, handler PartHandler) (io.WriteC
 	initOnce.Do(func() {
 		pool = &sync.Pool{
 			New: func() interface{} {
-				return make([]byte, partSize)
+				buf := make([]byte, partSize)
+				return &buf
 			},
 		}
 	})
@@ -87,8 +88,9 @@ func (nw *NWriter) startWriting(src io.Reader) {
 		go func() {
 			defer nw.wg.Done()
 
-			buffer := pool.Get().([]byte)
-			defer pool.Put(buffer)
+			bufferPtr := pool.Get().(*[]byte)
+			defer pool.Put(bufferPtr)
+			buffer := *bufferPtr
 
 			for nw.getErr() == nil {
 				n, err := reader.Read(buffer)

@@ -1,0 +1,27 @@
+ftpServer:
+  addr: ':2525'
+  username: 'fafda'
+  password: 'fafda'
+github:
+  #
+  # Expected memory usage
+  # Total Memory = (partSize * concurrency * simultaneous_uploads) + 20% overhead
+  #
+  # Part Size:
+  # - GitHub's max supported size is 2GB
+  # - Must stay under 1.6GB due to driver's ±20% randomization
+  # - Recommended: Keep below 10MB unless you have few TB of ram
+  # Concurrency:
+  # - Depends on your internet speed, don't have time to explain math fuck around and find out
+  # TL;DR for the inevitable tinkerers:
+  # If you have to ask what these settings do, DON'T TOUCH THEM
+  # The defaults work. Really. Just leave it alone.
+  partSize: 10485760 # 10MB
+  concurrency: 3
+  releases:
+    - readOnly: false # I will explain later keep it same
+      authToken: ''
+      username: ''
+      releaseId:
+      releaseTag: ''
+      repository: ''

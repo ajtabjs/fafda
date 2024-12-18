@@ -1,0 +1,30 @@
+name: Fafda Binary
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  release-fafda:
+    name: Release fafda binary
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [amd64]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          project_path: "./cmd/fafda"
+          binary_name: "fafda"
+          compress_assets: "OFF"
+          md5sum: true
+          ldflags: "-s -w"
+          asset_name: "fafda-${{ matrix.goos }}-${{ matrix.goarch }}"

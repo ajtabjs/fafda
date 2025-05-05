@@ -27,3 +27,6 @@ clean:
 
 build-linux:
 	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/release/$(BINARY_NAME) ./cmd/fafda
+
+build-windows:
+	set GOOS=windows&& set GOARCH=amd64&& go build -ldflags="-s -w" -o bin/release/$(BINARY_NAME).exe ./cmd/fafda

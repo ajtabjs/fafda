@@ -1,7 +1,14 @@
+
 ftpServer:
-  addr: ':2525'
-  username: 'fafda'
-  password: 'fafda'
+  addr: ":2525"
+  users:
+    - username: "fafda"
+      password: "fafda"
+    - username: "USER1"
+      password: "password"
+  portRange:
+    start: 50000
+    end: 51000
 github:
   #
   # Expected memory usage

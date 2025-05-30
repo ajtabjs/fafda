@@ -3,7 +3,6 @@ package ftp
 import (
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -26,51 +25,29 @@ func Serv(cfg config.FTPServer, fs afero.Fs) error {
 	logger := log.With().Str("component", "ftpserver").Logger()
 
 	driver := &Driver{
-		Fs:       fs,
-		Debug:    true,
-		username: cfg.Username,
-		password: cfg.Password,
+		Fs:     fs,
+		Debug:  true,
+		Users:  cfg.Users,
+		logger: logger,
 		Settings: &ftpserver.Settings{
 			ListenAddr:          cfg.Addr,
 			DefaultTransferType: ftpserver.TransferTypeBinary,
-			// Stooopid FTP thinks connection is idle, even when file transfer is going on.
-			// Default is 900 seconds after which the server will drop the connection
-			// Increased it to 24 hours to allow big file transfers
-			IdleTimeout: 86400, // 24 hour
+			IdleTimeout:         86400, // 24 hour
 		},
-		logger: logger,
 	}
 
-	if cfg.PortRange != nil {
-		portRange := &ftpserver.PortRange{}
-
-		if cfg.PortRange.Start < 1 || cfg.PortRange.Start > 65535 {
-			return fmt.Errorf("invalid start port: must be between 1-65535, got %d", cfg.PortRange.Start)
+	// Optionally resolve public IP
+	driver.Settings.PublicIPResolver = func(context ftpserver.ClientContext) (string, error) {
+		resp, err := http.Get(IPResolveURL)
+		if err != nil {
+			return "", err
 		}
-		if cfg.PortRange.End < 1 || cfg.PortRange.End > 65535 {
-			return fmt.Errorf("invalid end port: must be between 1-65535, got %d", cfg.PortRange.End)
+		defer resp.Body.Close()
+		ip, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
 		}
-
-		if cfg.PortRange.Start >= cfg.PortRange.End {
-			return fmt.Errorf("start port (%d) must be less than end port (%d)",
-				cfg.PortRange.Start, cfg.PortRange.End)
-		}
-
-		portRange.Start = cfg.PortRange.Start
-		portRange.End = cfg.PortRange.End
-
-		driver.Settings.PassiveTransferPortRange = portRange
-		driver.Settings.PublicIPResolver = func(context ftpserver.ClientContext) (string, error) {
-			resp, err := http.Get(IPResolveURL)
-			if err != nil {
-				return "", err
-			}
-			ip, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return "", err
-			}
-			return string(ip), nil
-		}
+		return string(ip), nil
 	}
 
 	server := ftpserver.NewFtpServer(driver)
@@ -83,8 +60,7 @@ type Driver struct {
 	Fs       afero.Fs
 	Debug    bool
 	Settings *ftpserver.Settings
-	username string
-	password string
+	Users    []config.FTPUser
 	logger   zerolog.Logger
 }
 
@@ -106,21 +82,23 @@ func (d *Driver) ClientDisconnected(cc ftpserver.ClientContext) {
 }
 
 func (d *Driver) AuthUser(cc ftpserver.ClientContext, user, pass string) (ftpserver.ClientDriver, error) {
-	if d.username != "" && d.username != user || d.password != "" && d.password != pass {
-		d.logger.Warn().
-			Str("address", cc.RemoteAddr().String()).
-			Uint32("session_id", cc.ID()).
-			Str("user", user).
-			Err(ErrBadUserNameOrPassword).
-			Msg("authentication failed")
-		return nil, ErrBadUserNameOrPassword
+	for _, u := range d.Users {
+		if u.Username == user && u.Password == pass {
+			d.logger.Info().
+				Str("address", cc.RemoteAddr().String()).
+				Uint32("sessionId", cc.ID()).
+				Str("user", user).
+				Msg("authentication successful")
+			return d.Fs, nil
+		}
 	}
-	d.logger.Info().
+	d.logger.Warn().
 		Str("address", cc.RemoteAddr().String()).
-		Uint32("sessionId", cc.ID()).
+		Uint32("session_id", cc.ID()).
 		Str("user", user).
-		Msg("authentication successful")
-	return d.Fs, nil
+		Err(ErrBadUserNameOrPassword).
+		Msg("authentication failed")
+	return nil, ErrBadUserNameOrPassword
 }
 
 func (d *Driver) GetSettings() (*ftpserver.Settings, error) { return d.Settings, nil }

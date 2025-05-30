@@ -23,16 +23,14 @@ type GitHub struct {
 	Releases    []GitHubRelease `koanf:"releases"`
 }
 
-type FTPPortRange struct {
-	Start int `koanf:"start"`
-	End   int `koanf:"end"`
+type FTPUser struct {
+	Username string `koanf:"username"`
+	Password string `koanf:"password"`
 }
 
 type FTPServer struct {
-	Addr      string        `koanf:"addr"`
-	Username  string        `koanf:"username"`
-	Password  string        `koanf:"password"`
-	PortRange *FTPPortRange `koanf:"portRange"`
+	Addr  string    `koanf:"addr"`
+	Users []FTPUser `koanf:"users"`
 }
 
 type HTTPServer struct {

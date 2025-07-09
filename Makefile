@@ -30,3 +30,7 @@ build-linux:
 
 build-windows:
 	set GOOS=windows&& set GOARCH=amd64&& go build -ldflags="-s -w" -o bin/release/$(BINARY_NAME).exe ./cmd/fafda
+
+build-linux-arm64:
+	GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/release/$(BINARY_NAME)-linux-arm64 ./cmd/fafda
+
